@@ -1,8 +1,32 @@
 {
   "$schema": "https://json.schemastore.org/nest-cli",
   "collection": "@nestjs/schematics",
-  "sourceRoot": "src",
+  "sourceRoot": "apps/emanager-backend/src",
   "compilerOptions": {
-    "deleteOutDir": true
+    "deleteOutDir": true,
+    "webpack": true,
+    "tsConfigPath": "apps/emanager-backend/tsconfig.app.json"
+  },
+  "monorepo": true,
+  "root": "apps/emanager-backend",
+  "projects": {
+    "emanager-backend": {
+      "type": "application",
+      "root": "apps/emanager-backend",
+      "entryFile": "main",
+      "sourceRoot": "apps/emanager-backend/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/emanager-backend/tsconfig.app.json"
+      }
+    },
+    "em-auth": {
+      "type": "application",
+      "root": "apps/em-auth",
+      "entryFile": "main",
+      "sourceRoot": "apps/em-auth/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/em-auth/tsconfig.app.json"
+      }
+    }
   }
 }
