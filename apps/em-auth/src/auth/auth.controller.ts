@@ -3,7 +3,7 @@ import { AuthService } from './auth.service';
 import { GoogleCallbackQuery } from './entities/google-callback-query.entity';
 import { Response } from 'express';
 
-@Controller('auth')
+@Controller('api/v1/auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 

@@ -19,5 +19,5 @@ model User {
   name          String?
   accessToken   String?
   refreshToken  String?
-  lastHistoryId String?
+  lastHistoryId Int?
 }

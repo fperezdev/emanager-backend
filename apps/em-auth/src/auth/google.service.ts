@@ -27,33 +27,34 @@ export class GoogleService implements OnModuleInit {
     this.googleOauthClient.setCredentials(tokens);
 
     const gmail = google.gmail({ version: 'v1', auth: this.googleOauthClient });
-    const result = await gmail.users.watch({
+    const response = await gmail.users.watch({
       userId: 'me',
       requestBody: {
         topicName: `projects/emanager-44/topics/emanager-messages-topic`,
       },
     });
 
-    if (result.data) {
-      const { email } = await this.googleOauthClient.getTokenInfo(
-        tokens.access_token,
-      );
+    const { historyId } = response.data;
 
-      await this.prismaService.user.upsert({
-        where: { email },
-        update: {
-          accessToken: tokens.access_token,
-          refreshToken: tokens.refresh_token,
-        },
-        create: {
-          email,
-          accessToken: tokens.access_token,
-          refreshToken: tokens.refresh_token,
-        },
-      });
+    const { email } = await this.googleOauthClient.getTokenInfo(
+      tokens.access_token,
+    );
 
-      return email;
-    } else return null;
+    await this.prismaService.user.upsert({
+      where: { email },
+      update: {
+        accessToken: tokens.access_token,
+        refreshToken: tokens.refresh_token,
+      },
+      create: {
+        email,
+        accessToken: tokens.access_token,
+        refreshToken: tokens.refresh_token,
+        lastHistoryId: Number(historyId),
+      },
+    });
+
+    return email;
   }
 
   getClient() {

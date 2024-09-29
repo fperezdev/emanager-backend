@@ -18,6 +18,15 @@
       "compilerOptions": {
         "tsConfigPath": "apps/em-auth/tsconfig.app.json"
       }
+    },
+    "em-gmail-receiver": {
+      "type": "application",
+      "root": "apps/em-gmail-receiver",
+      "entryFile": "main",
+      "sourceRoot": "apps/em-gmail-receiver/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/em-gmail-receiver/tsconfig.app.json"
+      }
     }
   }
 }
