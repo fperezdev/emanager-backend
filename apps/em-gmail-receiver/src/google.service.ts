@@ -1,58 +1,41 @@
-import { google, Auth, gmail_v1 } from 'googleapis';
-import { Injectable, OnModuleInit } from '@nestjs/common';
+import { PubSub } from '@google-cloud/pubsub';
+import { google, gmail_v1 } from 'googleapis';
+import { Injectable } from '@nestjs/common';
 
-interface Message {
-  id: string;
-  threadId: string;
-  labelsIds: string[];
-  date: string;
-  msgId: string;
-  subject: string;
-  from: string;
-  to: string;
-  fromName: string;
-  toName: string;
-  contentType: string;
-  content: string;
-  historyId: string;
-  internalDate: string;
-}
+const GCP_PROJECT_ID = process.env.GCP_PROJECT_ID;
+const PROCESSOR_TOPIC = process.env.PROCESSOR_TOPIC;
 
 @Injectable()
-export class GoogleService implements OnModuleInit {
-  private googleOauthClient: Auth.OAuth2Client;
-  private gmail: gmail_v1.Gmail;
-  private scopes = [
-    'https://www.googleapis.com/auth/gmail.readonly',
-    'https://www.googleapis.com/auth/userinfo.email',
-  ];
-
-  onModuleInit() {
-    // Google Oauth2 client
-    this.googleOauthClient = new google.auth.OAuth2(
-      process.env.GOOGLE_CLIENT_ID,
-      process.env.GOOGLE_CLIENT_SECRET,
-      process.env.GOOGLE_REDIRECT_URL,
-    );
-
-    this.gmail = google.gmail({ version: 'v1' });
-  }
-
+export class GoogleService {
   async getMessages(
     email: string,
     accessToken: string,
+    refreshToken: string,
     lastUserHistoryId: number,
-  ) {
-    const response = await this.gmail.users.history.list({
-      userId: email,
+  ): Promise<gmail_v1.Schema$Message[]> {
+    const googleOauthClient = createOauthClient();
+    googleOauthClient.setCredentials({
+      access_token: accessToken,
+      refresh_token: refreshToken,
+    });
+
+    const gmail = google.gmail({ version: 'v1', auth: googleOauthClient });
+
+    const response = await gmail.users.history.list({
+      userId: 'me',
       startHistoryId: lastUserHistoryId.toString(),
       historyTypes: ['messageAdded', 'messageDeleted'],
-      access_token: accessToken,
     });
+
     const { history } = response.data;
 
     if (!history) {
-      console.log('History with no new messages', email, lastUserHistoryId);
+      console.log(
+        new Date(),
+        'History with no new messages',
+        email,
+        lastUserHistoryId,
+      );
       return [];
     }
 
@@ -65,79 +48,46 @@ export class GoogleService implements OnModuleInit {
       ),
     ];
 
-    const googleAPIMessages = await Promise.all(
-      messageIds.map((messageId) =>
-        this.gmail.users.messages.get({
-          userId: email,
+    const messages: gmail_v1.Schema$Message[] = [];
+
+    for (const messageId of messageIds) {
+      try {
+        const message = await gmail.users.messages.get({
+          userId: 'me',
           id: messageId,
           format: 'full',
-          access_token: accessToken,
-        }),
-      ),
-    );
+        });
+        messages.push(message.data);
+      } catch (error) {
+        console.error('Error fetching message', messageId, error);
+      }
+    }
 
-    const parsedMessages = googleAPIMessages.map((message) =>
-      parseMessage(message.data),
-    );
-
-    return parsedMessages;
+    return messages;
   }
 
-  getClient() {
-    return this.googleOauthClient;
-  }
+  async publishMessages(messages: gmail_v1.Schema$Message[]) {
+    const pubSubClient = new PubSub({ projectId: GCP_PROJECT_ID });
 
-  getScopes() {
-    return this.scopes;
+    for (const message of messages) {
+      const dataBuffer = Buffer.from(JSON.stringify(message));
+
+      const messageId = await pubSubClient
+        .topic(PROCESSOR_TOPIC)
+        .publishMessage({ data: dataBuffer });
+
+      console.log(
+        `Message ${messageId} published`,
+        GCP_PROJECT_ID,
+        PROCESSOR_TOPIC,
+      );
+    }
   }
 }
 
-// Get all needed data from message response
-const parseMessage = (messageData: gmail_v1.Schema$Message): Message => {
-  const headers = {};
-  messageData.payload.headers.forEach((header) => {
-    headers[header.name.toLowerCase()] = header.value;
-  });
-
-  const { name: fromName, email: from } = splitNameAndEmail(headers['from']);
-  const { name: toName, email: to } = splitNameAndEmail(headers['to']);
-
-  const content = messageData.payload.parts
-    .filter((part) => part.mimeType.toLowerCase() === 'text/plain')
-    .map((part) => {
-      const contentBase64 = part.body.data;
-      const content = Buffer.from(contentBase64, 'base64').toString('utf8');
-      return content;
-    })
-    .join('\n');
-
-  return {
-    id: messageData.id,
-    threadId: messageData.threadId,
-    labelsIds: messageData.labelIds,
-    date: headers['date'],
-    msgId: headers['message-id'],
-    subject: headers['subject'],
-    from,
-    to,
-    fromName,
-    toName,
-    contentType: headers['content-type'],
-    content,
-    historyId: messageData.historyId,
-    internalDate: messageData.internalDate,
-  };
-};
-
-// Split name and email for strings like 'John Doe <john@doe.com>'
-const splitNameAndEmail = (text: string) => {
-  // Uses regex to get name and email
-  const regex = /^(.*)\s<(.+)>$/;
-  const result = text.match(regex);
-
-  if (result) {
-    const name = result[1];
-    const email = result[2];
-    return { name, email };
-  } else return { name: '', email: text };
-};
+const createOauthClient = () =>
+  new google.auth.OAuth2(
+    process.env.GOOGLE_CLIENT_ID,
+    process.env.GOOGLE_CLIENT_SECRET,
+    process.env.GOOGLE_REDIRECT_URL,
+  );

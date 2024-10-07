@@ -1,44 +1,49 @@
-import { google, Auth } from 'googleapis';
-import { Injectable, OnModuleInit } from '@nestjs/common';
+import { google } from 'googleapis';
+import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 
-@Injectable()
-export class GoogleService implements OnModuleInit {
-  private googleOauthClient: Auth.OAuth2Client;
-  private scopes = [
-    'https://www.googleapis.com/auth/gmail.readonly',
-    'https://www.googleapis.com/auth/userinfo.email',
-  ];
+const RECEIVER_TOPIC = process.env.RECEIVER_TOPIC;
 
+const GMAIL_OAUTH_SCOPES = [
+  'https://www.googleapis.com/auth/gmail.readonly',
+  'https://www.googleapis.com/auth/userinfo.email',
+];
+
+@Injectable()
+export class GoogleService {
   constructor(private prismaService: PrismaService) {}
 
-  onModuleInit() {
-    // Google Oauth2 client
-    this.googleOauthClient = new google.auth.OAuth2(
-      process.env.GOOGLE_CLIENT_ID,
-      process.env.GOOGLE_CLIENT_SECRET,
-      process.env.GOOGLE_REDIRECT_URL,
-    );
+  getAuthUrl(sessionState: string) {
+    const googleOauthClient = createOauthClient();
+
+    return googleOauthClient.generateAuthUrl({
+      access_type: 'offline',
+      scope: GMAIL_OAUTH_SCOPES,
+      include_granted_scopes: false,
+      // Include the state parameter to reduce the risk of CSRF attacks.
+      state: sessionState,
+    });
   }
 
   // Start watching the user's email on callback
   async watch(code: string): Promise<string | null> {
-    const { tokens } = await this.googleOauthClient.getToken(code);
-    this.googleOauthClient.setCredentials(tokens);
+    const googleOauthClient = createOauthClient();
 
-    const gmail = google.gmail({ version: 'v1', auth: this.googleOauthClient });
+    const { tokens } = await googleOauthClient.getToken(code);
+    googleOauthClient.setCredentials(tokens);
+
+    const gmail = google.gmail({ version: 'v1', auth: googleOauthClient });
     const response = await gmail.users.watch({
       userId: 'me',
       requestBody: {
-        topicName: `projects/emanager-44/topics/emanager-messages-topic`,
+        topicName: RECEIVER_TOPIC,
       },
     });
 
     const { historyId } = response.data;
 
-    const { email } = await this.googleOauthClient.getTokenInfo(
-      tokens.access_token,
-    );
+    const { access_token: accessToken } = tokens;
+    const { email } = await googleOauthClient.getTokenInfo(accessToken);
 
     await this.prismaService.user.upsert({
       where: { email },
@@ -56,12 +61,11 @@ export class GoogleService implements OnModuleInit {
 
     return email;
   }
-
-  getClient() {
-    return this.googleOauthClient;
-  }
-
-  getScopes() {
-    return this.scopes;
-  }
 }
+
+const createOauthClient = () =>
+  new google.auth.OAuth2(
+    process.env.GOOGLE_CLIENT_ID,
+    process.env.GOOGLE_CLIENT_SECRET,
+    process.env.GOOGLE_REDIRECT_URL,
+  );

@@ -11,7 +11,9 @@ describe('EmGmailReceiverController', () => {
       providers: [EmGmailReceiverService],
     }).compile();
 
-    emGmailReceiverController = app.get<EmGmailReceiverController>(EmGmailReceiverController);
+    emGmailReceiverController = app.get<EmGmailReceiverController>(
+      EmGmailReceiverController,
+    );
   });
 
   describe('root', () => {

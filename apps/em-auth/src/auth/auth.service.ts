@@ -6,15 +6,11 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { GoogleService } from './google.service';
-import { PrismaService } from '../prisma.service';
 import { Response } from 'express';
 
 @Injectable()
 export class AuthService {
-  constructor(
-    private googleService: GoogleService,
-    private prismaService: PrismaService,
-  ) {}
+  constructor(private googleService: GoogleService) {}
 
   googleOauthUrl(session: Record<string, any>, res: Response) {
     // Generate a secure random state value.
@@ -22,15 +18,7 @@ export class AuthService {
     // Store state in the session
     session.state = state;
 
-    const authUrl = this.googleService.getClient().generateAuthUrl({
-      // 'online' (default) or 'offline' (gets refresh_token)
-      access_type: 'offline',
-      scope: this.googleService.getScopes(),
-      // Enable incremental authorization. Recommended as a best practice.
-      include_granted_scopes: false,
-      // Include the state parameter to reduce the risk of CSRF attacks.
-      state: state,
-    });
+    const authUrl = this.googleService.getAuthUrl(state);
 
     return res.redirect(authUrl);
   }

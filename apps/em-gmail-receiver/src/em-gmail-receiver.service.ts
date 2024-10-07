@@ -11,9 +11,9 @@ export class EmGmailReceiverService {
   ) {}
 
   receiveNotification = async ({ message }: PushNotificationBody) => {
-    const { data: dataBase64 } = message;
+    const { data: rawData } = message;
     const data: PushNotificationData = JSON.parse(
-      Buffer.from(dataBase64, 'base64').toString('utf8'),
+      Buffer.from(rawData, 'base64').toString('utf8'),
     );
 
     const { emailAddress, historyId: newHistoryId } = data;
@@ -37,15 +37,15 @@ export class EmGmailReceiverService {
     const newMessages = await this.googleService.getMessages(
       emailAddress,
       accessToken,
+      refreshToken,
       lastHistoryId,
     );
 
-    const updatedUser = await this.prismaService.user.update({
+    await this.googleService.publishMessages(newMessages);
+
+    await this.prismaService.user.update({
       where: { id: user.id },
       data: { lastHistoryId: newHistoryId },
     });
-
-    console.log(new Date(), 'User updated', updatedUser);
-    console.log(new Date(), 'New messages', newMessages);
   };
 }
