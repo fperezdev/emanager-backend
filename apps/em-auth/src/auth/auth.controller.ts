@@ -7,6 +7,9 @@ import { Response } from 'express';
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
+  @Get('status')
+  status() {}
+
   @Get('google-oauth/url') // Obtain authetincation url for google oauth
   googleOauthUrl(
     @Session() session: Record<string, any>,
