@@ -1,0 +1,186 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: em-ksa
+--- # em-auth
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: em-auth-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: em-auth
+  template:
+    metadata:
+      labels:
+        app: em-auth
+    spec:
+      serviceAccountName: em-ksa
+      containers:
+        - name: em-auth-container
+          image: fperezsdev/emanager-repo:em-auth
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          resources:
+            requests:
+              cpu: '1m'
+          envFrom:
+            - configMapRef:
+                name: em-auth-config
+          livenessProbe:
+            httpGet:
+              path: /api/v1/auth/status
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /api/v1/auth/status
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          startupProbe:
+            httpGet:
+              path: /api/v1/auth/status
+              port: 8080
+            failureThreshold: 30
+            periodSeconds: 10
+        - name: cloud-sql-proxy
+          image: gcr.io/cloud-sql-connectors/cloud-sql-proxy:2.11.4
+          args:
+            - '--auto-iam-authn'
+            - '--structured-logs'
+            - '--port=5432'
+            - 'emanager-44:us-central1:emanager-postgre'
+
+          securityContext:
+            runAsNonRoot: true
+          resources:
+            requests:
+              memory: '2Gi'
+              cpu: '1'
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: em-auth-service
+spec:
+  type: NodePort
+  selector:
+    app: em-auth
+  ports:
+    - protocol: TCP
+      port: 8080
+      targetPort: 8080
+--- # em-gmail-receiver
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: em-gmail-receiver-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: em-gmail-receiver
+  template:
+    metadata:
+      labels:
+        app: em-gmail-receiver
+    spec:
+      serviceAccountName: em-ksa
+      containers:
+        - name: em-gmail-receiver-container
+          image: fperezsdev/emanager-repo:em-gmail-receiver
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          resources:
+            requests:
+              cpu: '1m'
+          envFrom:
+            - configMapRef:
+                name: em-auth-config
+          livenessProbe:
+            httpGet:
+              path: /api/v1/em-receiver/status
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /api/v1/em-receiver/status
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          startupProbe:
+            httpGet:
+              path: /api/v1/em-receiver/status
+              port: 8080
+            failureThreshold: 30
+            periodSeconds: 10
+        - name: cloud-sql-proxy
+          image: gcr.io/cloud-sql-connectors/cloud-sql-proxy:2.11.4
+          args:
+            - '--auto-iam-authn'
+            - '--structured-logs'
+            - '--port=5432'
+            - 'emanager-44:us-central1:emanager-postgre'
+
+          securityContext:
+            runAsNonRoot: true
+          resources:
+            requests:
+              memory: '2Gi'
+              cpu: '1'
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: em-gmail-receiver-service
+spec:
+  type: NodePort
+  selector:
+    app: em-gmail-receiver
+  ports:
+    - protocol: TCP
+      port: 8080
+      targetPort: 8080
+---
+apiVersion: networking.gke.io/v1
+kind: ManagedCertificate
+metadata:
+  name: em-managed-cert
+spec:
+  domains:
+    - emanager.fperezdev.com
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: em-ingress
+  annotations:
+    kubernetes.io/ingress.global-static-ip-name: 'em-web-static-ip'
+    networking.gke.io/managed-certificates: em-managed-cert
+    kubernetes.io/ingress.class: 'gce'
+spec:
+  rules:
+    - host: 'emanager.fperezdev.com'
+      http:
+        paths:
+          - path: /api/v1/auth/
+            pathType: Prefix
+            backend:
+              service:
+                name: em-auth-service
+                port:
+                  number: 8080
+          - path: /api/v1/em-receiver/
+            pathType: Prefix
+            backend:
+              service:
+                name: em-gmail-receiver-service
+                port:
+                  number: 8080
