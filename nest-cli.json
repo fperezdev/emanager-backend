@@ -27,6 +27,15 @@
       "compilerOptions": {
         "tsConfigPath": "apps/em-gmail-receiver/tsconfig.app.json"
       }
+    },
+    "em-realtime-api": {
+      "type": "application",
+      "root": "apps/em-realtime-api",
+      "entryFile": "main",
+      "sourceRoot": "apps/em-realtime-api/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/em-realtime-api/tsconfig.app.json"
+      }
     }
   }
 }
