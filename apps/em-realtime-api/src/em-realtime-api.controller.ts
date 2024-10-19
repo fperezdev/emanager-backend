@@ -11,6 +11,11 @@ export class RealtimeApiController {
     return 'EM Realtime API service is running';
   }
 
+  @Get('status-v2')
+  statusV2() {
+    return 'EM Realtime API service is running v2';
+  }
+
   @Post('notification')
   async receiveNotification(@Body() body: PushNotificationBody) {
     console.log('Received notification');
