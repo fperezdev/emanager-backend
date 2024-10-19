@@ -1,11 +1,16 @@
 import { Module } from '@nestjs/common';
-import { EmRealtimeApiController } from './em-realtime-api.controller';
 import { EmRealtimeApiService } from './em-realtime-api.service';
-import { WebsocketModule } from './websocket/websocket.module';
+import { EmRealtimeApiGateway } from './em-realtime-api.gateway';
+import { RealtimeApiController } from './em-realtime-api.controller';
+import { RedisService } from './redis.service';
 
 @Module({
-  imports: [WebsocketModule],
-  controllers: [EmRealtimeApiController],
-  providers: [EmRealtimeApiService],
+  providers: [
+    EmRealtimeApiModule,
+    EmRealtimeApiService,
+    EmRealtimeApiGateway,
+    RedisService,
+  ],
+  controllers: [RealtimeApiController],
 })
 export class EmRealtimeApiModule {}
