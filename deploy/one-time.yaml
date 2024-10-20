@@ -1,0 +1,21 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: em-redis-config
+data:
+  maxmemory: 2mb
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: em-ksa
+---
+# for gke ingress (no nginx)
+apiVersion: networking.gke.io/v1
+kind: ManagedCertificate
+metadata:
+  name: em-managed-cert
+spec:
+  domains:
+    - em.fperezdev.com

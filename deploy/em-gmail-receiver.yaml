@@ -2,21 +2,21 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: em-auth-deployment
+  name: em-gmail-receiver-deployment
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: em-auth
+      app: em-gmail-receiver
   template:
     metadata:
       labels:
-        app: em-auth
+        app: em-gmail-receiver
     spec:
       serviceAccountName: em-ksa
       containers:
-        - name: em-auth-container
-          image: fperezsdev/emanager-repo:em-auth
+        - name: em-gmail-receiver-container
+          image: fperezsdev/emanager-repo:em-gmail-receiver
           imagePullPolicy: Always
           ports:
             - containerPort: 8080
@@ -28,19 +28,19 @@ spec:
                 name: em-auth-config
           livenessProbe:
             httpGet:
-              path: /api/v1/em-auth/status
+              path: /api/v1/em-gmail-receiver/status
               port: 8080
             initialDelaySeconds: 5
             periodSeconds: 5
           readinessProbe:
             httpGet:
-              path: /api/v1/em-auth/status
+              path: /api/v1/em-gmail-receiver/status
               port: 8080
             initialDelaySeconds: 5
             periodSeconds: 5
           startupProbe:
             httpGet:
-              path: /api/v1/em-auth/status
+              path: /api/v1/em-gmail-receiver/status
               port: 8080
             failureThreshold: 30
             periodSeconds: 10
@@ -62,11 +62,11 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: em-auth-service
+  name: em-gmail-receiver-service
 spec:
   type: ClusterIP
   selector:
-    app: em-auth
+    app: em-gmail-receiver
   ports:
     - protocol: TCP
       port: 8080

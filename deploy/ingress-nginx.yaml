@@ -1,0 +1,36 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: em-ingress-nginx
+  annotations:
+    nginx.org/websocket-services: 'em-realtime-api-service'
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: '7200'
+    nginx.ingress.kubernetes.io/proxy-read-timeout: '7200'
+    nginx.ingress.kubernetes.io/proxy-send-timeout: '7200'
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: em.fperezdev.com
+      http:
+        paths:
+          - path: /api/v1/em-auth/
+            pathType: Prefix
+            backend:
+              service:
+                name: em-auth-service
+                port:
+                  number: 8080
+          - path: /api/v1/em-gmail-receiver/
+            pathType: Prefix
+            backend:
+              service:
+                name: em-gmail-receiver-service
+                port:
+                  number: 8080
+          - path: /api/v1/em-realtime-api
+            pathType: Prefix
+            backend:
+              service:
+                name: em-realtime-api-service
+                port:
+                  number: 8080

@@ -1,11 +1,4 @@
 ---
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: em-redis-config
-data:
-  maxmemory: 2mb
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:

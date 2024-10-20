@@ -3,12 +3,14 @@ import { AuthService } from './auth.service';
 import { GoogleCallbackQuery } from './entities/google-callback-query.entity';
 import { Response } from 'express';
 
-@Controller('api/v1/auth')
+@Controller('api/v1/em-auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Get('status')
-  status() {}
+  status() {
+    return 'EM Auth server is running';
+  }
 
   @Get('google-oauth/url') // Obtain authetincation url for google oauth
   googleOauthUrl(

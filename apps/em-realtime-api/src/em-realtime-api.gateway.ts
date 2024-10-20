@@ -9,7 +9,10 @@ import { RedisService } from './redis.service';
 import { Message } from './lib/types';
 import { InternalServerErrorException } from '@nestjs/common';
 
-@WebSocketGateway({ namespace: 'api/v1/em-realtime-api/ws' })
+@WebSocketGateway({
+  path: '/api/v1/em-realtime-api/ws',
+  namespace: 'api/v1/em-realtime-api/ws',
+})
 export class EmRealtimeApiGateway implements OnGatewayDisconnect {
   constructor(private readonly redisService: RedisService) {}
 
