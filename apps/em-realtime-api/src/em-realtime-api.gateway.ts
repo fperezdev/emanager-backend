@@ -1,4 +1,5 @@
 import {
+  OnGatewayConnection,
   OnGatewayDisconnect,
   SubscribeMessage,
   WebSocketGateway,
@@ -8,32 +9,43 @@ import { Server, Socket } from 'socket.io';
 import { RedisService } from './redis.service';
 import { Message } from './lib/types';
 import { InternalServerErrorException } from '@nestjs/common';
+import { EmRealtimeApiService } from './em-realtime-api.service';
 
 @WebSocketGateway({
   path: '/api/v1/em-realtime-api/ws',
   namespace: 'api/v1/em-realtime-api/ws',
+  cors: true,
 })
-export class EmRealtimeApiGateway implements OnGatewayDisconnect {
-  constructor(private readonly redisService: RedisService) {}
+export class EmRealtimeApiGateway
+  implements OnGatewayConnection, OnGatewayDisconnect
+{
+  constructor(
+    private readonly realtimeService: EmRealtimeApiService,
+    private readonly redisService: RedisService,
+  ) {}
 
   @WebSocketServer()
   server: Server;
+
+  async handleConnection(client: Socket) {
+    // TODO - Implement user authentication
+    const { email } = client.handshake.query;
+    if (typeof email === 'string') {
+      this.redisService.set(`${email}-client-id`, client.id);
+      const messages = await this.realtimeService.getMessages(email);
+      client.emit('connected', messages);
+      console.log('Client connected', email, client.id);
+    }
+  }
 
   handleDisconnect(client: Socket) {
     console.log('Client disconnected', client.id);
   }
 
-  @SubscribeMessage('hi')
-  handleHi(client: Socket) {
-    const ack = client.emit('hi', 'Hello from server');
-    console.log('Hi', client.id, ack);
-  }
-
-  @SubscribeMessage('connection')
+  @SubscribeMessage('getMessages')
   handleMessage(client: Socket, payload: string) {
     const email = payload;
-    this.redisService.set(`${email}-client-id`, client.id);
-    console.log('Client saved to cache', email);
+    return this.realtimeService.getMessages(email);
   }
 
   async sendNotification(email: string, message: Message) {

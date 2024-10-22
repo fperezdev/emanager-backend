@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import { Body, Controller, Get, Post } from '@nestjs/common';
 import { Message, PushNotificationBody } from './lib/types';
 import { EmRealtimeApiGateway } from './em-realtime-api.gateway';
 import { EmRealtimeApiService } from './em-realtime-api.service';
@@ -27,10 +27,5 @@ export class RealtimeApiController {
 
     await this.realtimeGateway.sendNotification(message.to, message);
     // Default 201 for acknowdlegement
-  }
-
-  @Get('message/:email')
-  async getMessages(@Param('email') email: string) {
-    return await this.realtimeService.getMessages(email);
   }
 }
