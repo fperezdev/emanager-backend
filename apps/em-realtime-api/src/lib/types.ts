@@ -27,3 +27,13 @@ export interface Message {
   historyId: string;
   internalDate: string;
 }
+
+export interface MessageResponse {
+  id: string;
+  threadId: string;
+  date: string;
+  subject: string;
+  from: string;
+  content: string;
+  categories: string;
+}
