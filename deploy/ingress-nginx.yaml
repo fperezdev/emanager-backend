@@ -4,9 +4,12 @@ metadata:
   name: em-ingress-nginx
   annotations:
     nginx.org/websocket-services: 'em-realtime-api-service'
-    nginx.ingress.kubernetes.io/proxy-connect-timeout: '7200'
-    nginx.ingress.kubernetes.io/proxy-read-timeout: '7200'
-    nginx.ingress.kubernetes.io/proxy-send-timeout: '7200'
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: '3600'
+    nginx.ingress.kubernetes.io/proxy-send-timeout: '3600'
+    nginx.ingress.kubernetes.io/proxy-read-timeout: '3600'
+    nginx.ingress.kubernetes.io/proxy-buffering: 'on'
+    nginx.ingress.kubernetes.io/proxy-http-version: '1.0'
+    nginx.ingress.kubernetes.io/connection-proxy-header: 'keep-alive'
 spec:
   ingressClassName: nginx
   rules:

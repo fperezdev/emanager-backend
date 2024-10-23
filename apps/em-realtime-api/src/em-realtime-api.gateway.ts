@@ -50,9 +50,11 @@ export class EmRealtimeApiGateway
 
   async sendNotification(email: string, message: Message) {
     const clientId = await this.redisService.get(`${email}-client-id`);
-    console.log('Sending notification to', email, clientId);
-    if (!clientId)
-      throw new InternalServerErrorException('Client not found in cache');
+    if (!clientId || clientId === 'null') {
+      console.log('Client not found in cache', email);
+      return;
+    }
+    console.log('Sending noti to', email, clientId);
 
     const ack = this.server.to(clientId).emit('notification', message);
     if (!ack)
